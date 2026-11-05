@@ -57,6 +57,23 @@ class ActiveSalaryPeriodNotifier extends StateNotifier<AsyncValue<SalaryPeriod>>
     }
   }
 
+  Future<void> creditSalaryForMonth({
+    required double amount,
+    required String accountId,
+    required DateTime creditDate,
+    String? notes,
+  }) async {
+    await AppDatabase.instance.creditSalaryForPeriod(
+      year: selectedMonth.year,
+      month: selectedMonth.month,
+      netSalary: amount,
+      accountId: accountId,
+      creditDate: creditDate,
+      notes: notes,
+    );
+    await loadPeriod();
+  }
+
   Future<void> updatePeriodDetails({
     required DateTime creditDate,
     required DateTime startDate,

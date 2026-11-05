@@ -15,37 +15,23 @@ class SalarySettingsDialog extends ConsumerStatefulWidget {
 }
 
 class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
-  late TextEditingController _salaryAmountCtrl;
   late TextEditingController _sourceCtrl;
   late TextEditingController _dayCtrl;
-  late TextEditingController _pfCtrl;
-  late TextEditingController _taxCtrl;
-  late TextEditingController _insuranceCtrl;
   String? _selectedAccountId;
 
   @override
   void initState() {
     super.initState();
     final cfg = widget.currentConfig;
-    _salaryAmountCtrl =
-        TextEditingController(text: cfg.defaultSalaryAmount.toStringAsFixed(0));
     _sourceCtrl = TextEditingController(text: cfg.defaultIncomeSource);
     _dayCtrl = TextEditingController(text: cfg.defaultSalaryDay.toString());
-    _pfCtrl = TextEditingController(text: cfg.defaultPfDeduction.toStringAsFixed(0));
-    _taxCtrl = TextEditingController(text: cfg.defaultTaxDeduction.toStringAsFixed(0));
-    _insuranceCtrl =
-        TextEditingController(text: cfg.defaultInsuranceDeduction.toStringAsFixed(0));
     _selectedAccountId = cfg.defaultSalaryAccountId;
   }
 
   @override
   void dispose() {
-    _salaryAmountCtrl.dispose();
     _sourceCtrl.dispose();
     _dayCtrl.dispose();
-    _pfCtrl.dispose();
-    _taxCtrl.dispose();
-    _insuranceCtrl.dispose();
     super.dispose();
   }
 
@@ -54,26 +40,17 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
     final accountsAsync = ref.watch(accountsProvider);
 
     return AlertDialog(
-      title: const Text('Default Salary Settings'),
+      title: const Text('Salary Preferences'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'These defaults apply when generating upcoming salary cycles. Past cycles remain intact.',
+              'Set your default salary payday and default receiving bank account.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _salaryAmountCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Gross Monthly Salary (₹)',
-                prefixIcon: Icon(Icons.payments),
-              ),
-            ),
-            const SizedBox(height: 12),
             TextField(
               controller: _sourceCtrl,
               decoration: const InputDecoration(
@@ -86,9 +63,9 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
               controller: _dayCtrl,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Default Credit Day of Month (1-31)',
+                labelText: 'Default Salary Payday (1-31)',
                 prefixIcon: Icon(Icons.calendar_today),
-                helperText: 'E.g. 1 for 1st of month, 31 for month-end',
+                helperText: 'E.g. 1 for 1st of month, 25 for 25th',
               ),
             ),
             const SizedBox(height: 12),
@@ -100,7 +77,7 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
                 return DropdownButtonFormField<String>(
                   value: _selectedAccountId,
                   decoration: const InputDecoration(
-                    labelText: 'Salary Credit Account',
+                    labelText: 'Default Salary Bank Account',
                     prefixIcon: Icon(Icons.account_balance),
                   ),
                   items: accounts.map((a) {
@@ -109,40 +86,8 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
                   onChanged: (val) => setState(() => _selectedAccountId = val),
                 );
               },
-              loading: () => const SizedBox.shrink(),
+              loading: () => const LinearProgressIndicator(),
               error: (_, __) => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Standard Monthly Deductions',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _pfCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Provident Fund (PF) (₹)',
-                prefixIcon: Icon(Icons.security),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _taxCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Income Tax (TDS) (₹)',
-                prefixIcon: Icon(Icons.receipt_long),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _insuranceCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Health Insurance (₹)',
-                prefixIcon: Icon(Icons.health_and_safety),
-              ),
             ),
           ],
         ),
@@ -154,20 +99,12 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            final amount = double.tryParse(_salaryAmountCtrl.text) ?? 85000.0;
             final day = (int.tryParse(_dayCtrl.text) ?? 1).clamp(1, 31);
-            final pf = double.tryParse(_pfCtrl.text) ?? 0.0;
-            final tax = double.tryParse(_taxCtrl.text) ?? 0.0;
-            final ins = double.tryParse(_insuranceCtrl.text) ?? 0.0;
 
-            final updated = SalaryConfig(
-              defaultSalaryAmount: amount,
+            final updated = widget.currentConfig.copyWith(
               defaultIncomeSource: _sourceCtrl.text.trim(),
               defaultSalaryDay: day,
               defaultSalaryAccountId: _selectedAccountId,
-              defaultPfDeduction: pf,
-              defaultTaxDeduction: tax,
-              defaultInsuranceDeduction: ins,
             );
 
             await AppDatabase.instance.updateSalaryConfig(updated);
@@ -176,7 +113,7 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
             if (context.mounted) {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Salary configuration updated')),
+                const SnackBar(content: Text('Salary preferences updated')),
               );
             }
           },
@@ -186,4 +123,3 @@ class _SalarySettingsDialogState extends ConsumerState<SalarySettingsDialog> {
     );
   }
 }
-

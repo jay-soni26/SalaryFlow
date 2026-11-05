@@ -112,9 +112,9 @@ class ReportsScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSummaryItem('Net Inflow', summary.totalIncome, AppColors.income),
+                      _buildSummaryItem('Take-Home', summary.netSalary, AppColors.income),
                       _buildSummaryItem('Total Spent', summary.totalExpenses, AppColors.expense),
-                      _buildSummaryItem('Deductions', summary.totalDeductions, AppColors.deduction),
+                      _buildSummaryItem('Net Balance', summary.availableSpendingBalance, AppColors.primary),
                     ],
                   ),
                   const SizedBox(height: 16),

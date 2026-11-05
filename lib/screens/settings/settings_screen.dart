@@ -47,9 +47,9 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   child: const Icon(Icons.payments, color: AppColors.primary),
                 ),
-                title: const Text('Default Salary & Deductions', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text('Salary Payday & Receiving Bank', style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(
-                  '${CurrencyFormat.format(cfg.defaultSalaryAmount)} • Credit Day: ${cfg.defaultSalaryDay}th\nNet: ${CurrencyFormat.format(cfg.defaultNetSalary)}',
+                  'Default Payday: ${cfg.defaultSalaryDay}th of month • ${cfg.defaultIncomeSource}',
                   style: const TextStyle(fontSize: 12),
                 ),
                 trailing: const Icon(Icons.chevron_right),

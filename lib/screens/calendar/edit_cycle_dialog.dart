@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/currency_format.dart';
 import '../../../core/utils/date_cycle_helper.dart';
 import '../../../models/salary_period.dart';
 import '../../../providers/salary_cycle_provider.dart';
+import '../../../providers/accounts_provider.dart';
+import '../../../providers/transactions_provider.dart';
 
 class EditCycleDialog extends ConsumerStatefulWidget {
   final SalaryPeriod period;
@@ -19,10 +20,10 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
   late DateTime _creditDate;
   late DateTime _startDate;
   late DateTime _endDate;
-  late TextEditingController _grossSalaryCtrl;
-  late TextEditingController _deductionsCtrl;
+  late TextEditingController _netSalaryCtrl;
   late TextEditingController _carryForwardCtrl;
   late TextEditingController _notesCtrl;
+  String? _selectedAccountId;
 
   @override
   void initState() {
@@ -30,32 +31,32 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
     _creditDate = widget.period.creditDate;
     _startDate = widget.period.startDate;
     _endDate = widget.period.endDate;
-    _grossSalaryCtrl =
-        TextEditingController(text: widget.period.grossSalary.toStringAsFixed(0));
-    _deductionsCtrl =
-        TextEditingController(text: widget.period.deductions.toStringAsFixed(0));
+    _netSalaryCtrl = TextEditingController(
+      text: widget.period.netSalary > 0
+          ? widget.period.netSalary.toStringAsFixed(0)
+          : '',
+    );
     _carryForwardCtrl =
         TextEditingController(text: widget.period.carryForwardBalance.toStringAsFixed(0));
     _notesCtrl = TextEditingController(text: widget.period.notes ?? '');
+    _selectedAccountId = widget.period.salaryAccountId;
   }
 
   @override
   void dispose() {
-    _grossSalaryCtrl.dispose();
-    _deductionsCtrl.dispose();
+    _netSalaryCtrl.dispose();
     _carryForwardCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
-  double get _netSalary {
-    final gross = double.tryParse(_grossSalaryCtrl.text) ?? 0.0;
-    final ded = double.tryParse(_deductionsCtrl.text) ?? 0.0;
-    return (gross - ded).clamp(0.0, double.infinity);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsProvider);
+    final monthTitle = DateCycleHelper.formatMonthYear(
+      DateTime(widget.period.year, widget.period.month),
+    );
+
     return AlertDialog(
       title: Row(
         children: [
@@ -63,8 +64,8 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Edit Cycle: ${DateCycleHelper.formatMonthYear(DateTime(widget.period.year, widget.period.month))}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Salary & Cycle: $monthTitle',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -75,16 +76,61 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Customize this salary cycle independently. Changes apply only to this period.',
+              'Customize in-hand salary, credit account, and date range for this month.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 16),
+
+            // Take-Home Salary
+            TextField(
+              controller: _netSalaryCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                labelText: 'Take-Home Salary (₹)',
+                prefixText: '₹ ',
+                prefixIcon: Icon(Icons.payments),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Preferred Bank Account
+            accountsAsync.when(
+              data: (accounts) {
+                if (_selectedAccountId == null && accounts.isNotEmpty) {
+                  final def = accounts.firstWhere(
+                    (a) => a.isSalaryDefault,
+                    orElse: () => accounts.first,
+                  );
+                  _selectedAccountId = def.id;
+                }
+                return DropdownButtonFormField<String>(
+                  value: _selectedAccountId,
+                  decoration: const InputDecoration(
+                    labelText: 'Deposit Bank Account',
+                    prefixIcon: Icon(Icons.account_balance),
+                  ),
+                  items: accounts.map((acc) {
+                    return DropdownMenuItem(
+                      value: acc.id,
+                      child: Text(acc.name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => _selectedAccountId = val);
+                  },
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 12),
 
             // Credit Date Picker
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.event_available, color: AppColors.primary),
-              title: const Text('Salary Credit Date', style: TextStyle(fontSize: 14)),
+              title: const Text('Salary Credit Date', style: TextStyle(fontSize: 13)),
               subtitle: Text(
                 DateCycleHelper.formatShortDate(_creditDate),
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -113,7 +159,7 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.start, color: AppColors.secondary),
-              title: const Text('Period Start Date', style: TextStyle(fontSize: 14)),
+              title: const Text('Period Start Date', style: TextStyle(fontSize: 13)),
               subtitle: Text(
                 DateCycleHelper.formatShortDate(_startDate),
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -136,7 +182,7 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.arrow_circle_right, color: AppColors.expense),
-              title: const Text('Period End Date', style: TextStyle(fontSize: 14)),
+              title: const Text('Period End Date', style: TextStyle(fontSize: 13)),
               subtitle: Text(
                 DateCycleHelper.formatShortDate(_endDate),
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -158,54 +204,6 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
             const Divider(),
             const SizedBox(height: 8),
 
-            // Gross Salary
-            TextField(
-              controller: _grossSalaryCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Gross Salary (₹)',
-                prefixIcon: Icon(Icons.payments),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-
-            // Deductions (PF, Tax, etc.)
-            TextField(
-              controller: _deductionsCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Total Deductions (PF, Tax) (₹)',
-                prefixIcon: Icon(Icons.receipt_long),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-
-            // Net Salary Indicator
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.income.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Net Salary Credited:'),
-                  Text(
-                    CurrencyFormat.format(_netSalary),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.income,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
             // Carry Forward Balance
             TextField(
               controller: _carryForwardCtrl,
@@ -213,16 +211,6 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
               decoration: const InputDecoration(
                 labelText: 'Carry Forward Balance (₹)',
                 prefixIcon: Icon(Icons.trending_flat),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Notes
-            TextField(
-              controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notes for this cycle (optional)',
-                prefixIcon: Icon(Icons.notes),
               ),
             ),
           ],
@@ -235,33 +223,43 @@ class _EditCycleDialogState extends ConsumerState<EditCycleDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            final gross = double.tryParse(_grossSalaryCtrl.text) ?? widget.period.grossSalary;
-            final ded = double.tryParse(_deductionsCtrl.text) ?? widget.period.deductions;
-            final carry = double.tryParse(_carryForwardCtrl.text) ?? 0.0;
-            final net = (gross - ded).clamp(0.0, double.infinity);
+            final salary = double.tryParse(_netSalaryCtrl.text.trim()) ?? 0.0;
+            final carry = double.tryParse(_carryForwardCtrl.text.trim()) ?? 0.0;
+
+            if (salary > 0 && _selectedAccountId != null) {
+              await ref.read(activeSalaryPeriodProvider.notifier).creditSalaryForMonth(
+                    amount: salary,
+                    accountId: _selectedAccountId!,
+                    creditDate: _creditDate,
+                    notes: _notesCtrl.text.trim(),
+                  );
+            }
 
             await ref.read(activeSalaryPeriodProvider.notifier).updatePeriodDetails(
                   creditDate: _creditDate,
                   startDate: _startDate,
                   endDate: _endDate,
-                  grossSalary: gross,
-                  deductions: ded,
-                  netSalary: net,
+                  grossSalary: salary,
+                  deductions: 0.0,
+                  netSalary: salary,
                   carryForwardBalance: carry,
+                  salaryAccountId: _selectedAccountId,
                   notes: _notesCtrl.text.trim(),
                 );
+
+            ref.read(accountsProvider.notifier).loadAccounts();
+            ref.read(allTransactionsProvider.notifier).loadTransactions();
 
             if (context.mounted) {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Salary period updated successfully')),
+                const SnackBar(content: Text('Salary period updated')),
               );
             }
           },
-          child: const Text('Save Changes'),
+          child: const Text('Save'),
         ),
       ],
     );
   }
 }
-

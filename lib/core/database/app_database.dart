@@ -162,7 +162,7 @@ class AppDatabase {
       return SalaryPeriod.fromMap(res.first);
     }
 
-    // Auto-create from configuration
+    // Auto-create period dates (start/end) without forcing phantom salary on past/future months
     final config = await getSalaryConfig();
     final dates = DateCycleHelper.getDefaultPeriodDates(
       year: year,
@@ -175,6 +175,20 @@ class AppDatabase {
       config.defaultSalaryDay,
     );
 
+    // Check if an existing salary transaction already exists for this period
+    final txRes = await db.query(
+      DatabaseSchema.tableTransactions,
+      where: 'salary_period_id = ? AND category_id = ?',
+      whereArgs: [periodId, 'cat_salary'],
+    );
+
+    double initialNetSalary = 0.0;
+    String? accountId = config.defaultSalaryAccountId;
+    if (txRes.isNotEmpty) {
+      initialNetSalary = (txRes.first['amount'] as num).toDouble();
+      accountId = txRes.first['account_id'] as String?;
+    }
+
     final newPeriod = SalaryPeriod(
       id: periodId,
       year: year,
@@ -182,10 +196,10 @@ class AppDatabase {
       creditDate: creditDate,
       startDate: dates.startDate,
       endDate: dates.endDate,
-      grossSalary: config.defaultSalaryAmount,
-      deductions: config.defaultTotalDeductions,
-      netSalary: config.defaultNetSalary,
-      salaryAccountId: config.defaultSalaryAccountId,
+      grossSalary: initialNetSalary,
+      deductions: 0.0,
+      netSalary: initialNetSalary,
+      salaryAccountId: accountId,
       isCustomized: false,
     );
 
@@ -201,6 +215,62 @@ class AppDatabase {
       where: 'id = ?',
       whereArgs: [period.id],
     );
+  }
+
+  Future<void> creditSalaryForPeriod({
+    required int year,
+    required int month,
+    required double netSalary,
+    required String accountId,
+    required DateTime creditDate,
+    String? notes,
+  }) async {
+    final periodId = '$year-${month.toString().padLeft(2, '0')}';
+    final db = await database;
+
+    // Check if a salary transaction already exists for this period
+    final existingTxRes = await db.query(
+      DatabaseSchema.tableTransactions,
+      where: 'salary_period_id = ? AND category_id = ?',
+      whereArgs: [periodId, 'cat_salary'],
+    );
+
+    if (existingTxRes.isNotEmpty) {
+      final oldTx = TransactionModel.fromMap(existingTxRes.first);
+      final newTx = oldTx.copyWith(
+        amount: netSalary,
+        accountId: accountId,
+        date: creditDate,
+        description: 'Monthly Salary Credit',
+      );
+      await updateTransaction(oldTx, newTx);
+    } else {
+      final tx = TransactionModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        amount: netSalary,
+        date: creditDate,
+        type: TransactionType.income,
+        categoryId: 'cat_salary',
+        categoryName: 'Salary Credit',
+        accountId: accountId,
+        description: 'Monthly Salary Credit',
+        salaryPeriodId: periodId,
+        paymentApp: 'bank_transfer',
+      );
+      await addTransaction(tx);
+    }
+
+    final period = await getOrCreateSalaryPeriod(year, month);
+    final updatedPeriod = period.copyWith(
+      creditDate: creditDate,
+      grossSalary: netSalary,
+      deductions: 0.0,
+      netSalary: netSalary,
+      salaryAccountId: accountId,
+      isCustomized: true,
+      notes: notes,
+    );
+    await updateSalaryPeriod(updatedPeriod);
   }
 
   Future<List<SalaryPeriod>> getAllSalaryPeriods() async {

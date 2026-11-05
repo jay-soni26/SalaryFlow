@@ -100,7 +100,7 @@ class BalanceCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Net Salary Credited',
+                      'Take-Home Salary',
                       style: TextStyle(color: Colors.white70, fontSize: 11),
                     ),
                     const SizedBox(height: 2),

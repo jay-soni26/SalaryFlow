@@ -123,6 +123,7 @@ final periodFinancialSummaryProvider = Provider<PeriodFinancialSummary>((ref) {
 
   return activePeriodAsync.when(
     data: (period) {
+      double salaryIncome = 0.0;
       double otherIncome = 0.0;
       double totalExpenses = 0.0;
       double totalDeductions = 0.0;
@@ -132,7 +133,13 @@ final periodFinancialSummaryProvider = Provider<PeriodFinancialSummary>((ref) {
       for (final tx in transactions) {
         switch (tx.type) {
           case TransactionType.income:
-            otherIncome += tx.amount;
+            if (tx.categoryId == 'cat_salary' ||
+                tx.categoryName.toLowerCase().contains('salary') ||
+                tx.description.toLowerCase().contains('salary')) {
+              salaryIncome += tx.amount;
+            } else {
+              otherIncome += tx.amount;
+            }
             break;
           case TransactionType.expense:
             totalExpenses += tx.amount;
@@ -155,7 +162,8 @@ final periodFinancialSummaryProvider = Provider<PeriodFinancialSummary>((ref) {
         }
       }
 
-      final totalIncome = period.netSalary + otherIncome;
+      final effectiveSalary = salaryIncome > 0 ? salaryIncome : period.netSalary;
+      final totalIncome = effectiveSalary + otherIncome;
       final availableSpending =
           (period.carryForwardBalance + totalIncome) - totalExpenses - savingsDeposits + savingsWithdrawals;
 
@@ -167,8 +175,8 @@ final periodFinancialSummaryProvider = Provider<PeriodFinancialSummary>((ref) {
       }
 
       return PeriodFinancialSummary(
-        grossSalary: period.grossSalary,
-        netSalary: period.netSalary,
+        grossSalary: effectiveSalary,
+        netSalary: effectiveSalary,
         otherIncome: otherIncome,
         totalIncome: totalIncome,
         totalExpenses: totalExpenses.clamp(0.0, double.infinity),

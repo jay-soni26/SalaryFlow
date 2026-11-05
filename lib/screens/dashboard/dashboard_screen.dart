@@ -7,8 +7,10 @@ import '../../models/transaction_model.dart';
 import '../../providers/transactions_provider.dart';
 import '../../providers/theme_provider.dart';
 import 'widgets/cycle_banner.dart';
+import 'widgets/month_salary_card.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/metric_card.dart';
+import 'widgets/dashboard_accounts_row.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/upcoming_bills_widget.dart';
 import '../transactions/transactions_screen.dart';
@@ -66,9 +68,11 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const CycleBanner(),
+              const MonthSalaryCard(),
               const BalanceCard(),
               const MetricsGrid(),
-              const SecondaryMetricsRow(),
+              const SizedBox(height: 8),
+              const DashboardAccountsRow(),
               const SizedBox(height: 8),
               const QuickActionsBar(),
               const UpcomingBillsWidget(),
@@ -126,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Tap + to log salary, income, or expenses',
+                          'Tap + to log income, expenses, or transfers',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -251,4 +255,3 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 }
-
