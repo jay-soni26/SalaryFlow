@@ -198,3 +198,4 @@ class _CreditSalaryDialogState extends ConsumerState<CreditSalaryDialog> {
     );
   }
 }
+

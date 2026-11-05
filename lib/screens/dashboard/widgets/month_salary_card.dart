@@ -165,3 +165,4 @@ class MonthSalaryCard extends ConsumerWidget {
     );
   }
 }
+
