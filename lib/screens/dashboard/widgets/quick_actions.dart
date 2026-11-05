@@ -4,7 +4,6 @@ import '../../../models/transaction_model.dart';
 import '../../transactions/add_edit_transaction_screen.dart';
 import '../../accounts/accounts_screen.dart';
 import '../../budgets/budgets_screen.dart';
-import '../../savings/savings_screen.dart';
 
 class QuickActionsBar extends StatelessWidget {
   const QuickActionsBar({super.key});

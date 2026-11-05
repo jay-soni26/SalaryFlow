@@ -52,7 +52,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => AddEditTransactionScreen(
+              builder: (_) => const AddEditTransactionScreen(
                 initialType: TransactionType.expense,
               ),
             ),

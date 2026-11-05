@@ -12,7 +12,6 @@ import 'widgets/metric_card.dart';
 import 'widgets/quick_actions.dart';
 import 'widgets/upcoming_bills_widget.dart';
 import '../transactions/transactions_screen.dart';
-import '../transactions/add_edit_transaction_screen.dart';
 import '../transactions/transaction_detail_dialog.dart';
 
 class DashboardScreen extends ConsumerWidget {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../models/salary_config.dart';
 import '../../../core/database/app_database.dart';
 import '../../../providers/salary_cycle_provider.dart';

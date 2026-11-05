@@ -7,8 +7,6 @@ import '../../models/savings_goal.dart';
 import '../../models/recurring_transaction.dart';
 
 class SampleData {
-  static const uuid = Uuid();
-
   // Initial Default Categories
   static List<TransactionCategory> get defaultCategories => [
     // Income Categories
